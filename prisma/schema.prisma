@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model LearningCenter {
+  id Int @id @default(autoincrement())
+  lcname String @unique
+  region String
+  users   User[]
+  students Student[]
+  teachers Teacher[]
+  createdOn DateTime @default(now())
+  modifiedOn DateTime @default(now())
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  role       String   // "System Admin" or "Volunteer Teacher"
+  password   String
+  learningCenter LearningCenter? @relation(fields: [learningCenterId], references: [id])
+  learningCenterId Int?
+  createdOn  DateTime @default(now()) 
+  modifiedOn DateTime @default(now())
+  avatarUrl  String?
+}
+
+model Teacher {
+  id Int @id @default(autoincrement())
+  teacherName String
+  teacherNRC String
+  position String
+  status String  
+  lcname LearningCenter @relation (fields: [lcID], references:[id])
+  lcID Int
+  address String
+  phnumber String
+  joinDate DateTime 
+  createdOn DateTime @default(now()) 
+  modifiedOn DateTime @default(now())
+}
+
+model Student {
+  id Int @id @default(autoincrement())
+  lcname LearningCenter @relation (fields: [lcID], references:[id])
+  lcID Int
+  acayr String
+  name String
+  stuID String @unique
+  grade String
+  gender String
+  pwd String
+  guardianName String @map("gurdianName")  // keeps old DB column
+  guardianNRC  String @map("gurdianNRC")   // keeps old DB column
+  familyMember Int
+  over18Male Int
+  over18Female Int
+  under18Male Int
+  under18Female Int
+  stuStatus String
+  acaReview String
+  kidsClubStu String
+  dropoutStu String
+  examresults ExamResults[]
+  createdOn DateTime @default(now()) 
+  modifiedOn DateTime @default(now())
+}
+
+model ExamResults {
+  id Int @id @default(autoincrement())
+  student Student @relation (fields: [studentID], references:[id])
+  studentID Int
+  session String
+  myanmar_mark Int
+  myanmar_grade String
+  english_mark Int
+  english_grade String
+  maths_mark Int
+  maths_grade String
+  science_mark Int
+  science_grade String
+  social_mark Int?
+  social_grade String?
+  geography_mark Int?
+  geography_grade String?
+  history_mark Int?
+  history_grade String?  
+  childrights_mark Int
+  childrights_grade String
+  srhr_mark Int
+  srhr_grade String
+  pss_mark Int
+  pss_grade String
+  kidsclub_mark Int
+  kidsclub_grade String
+  average_mark Float @default(0)
+  average_grade String
+  attendance_mark Int
+  attendance_grade String
+  total_marks Int @default(0)
+  createdOn DateTime @default(now()) 
+  modifiedOn DateTime @default(now())
+}
