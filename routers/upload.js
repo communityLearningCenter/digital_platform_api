@@ -7,7 +7,6 @@ const prisma = require("../prismaClient");
 
 const router = express.Router();
 const baseUrl = process.env.VITE_API_URL || `http://localhost:${process.env.PORT || 8000}`;
-const fileUrl = `${baseUrl}/profile-images/${filename}`;
 
 // Multer storage config
 const storage = multer.diskStorage({
@@ -32,7 +31,8 @@ router.post("/upload-profile", upload.single("image"), async (req, res) => {
     const ext = path.extname(req.file.originalname);
     const filename = `${username}_profile${ext}`;
     //const filePath = path.join("Profile Images", filename); // relative path
-    const fileUrl = `http://localhost:8000/profile-images/${filename}`;
+    const fileUrl = `${baseUrl}/profile-images/${filename}`;
+;
 
     // Update User table
     const updatedUser = await prisma.user.update({
