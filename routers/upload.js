@@ -6,6 +6,8 @@ const path = require("path");
 const prisma = require("../prismaClient");
 
 const router = express.Router();
+const baseUrl = process.env.VITE_API_URL || `http://localhost:${process.env.PORT || 8000}`;
+const fileUrl = `${baseUrl}/profile-images/${filename}`;
 
 // Multer storage config
 const storage = multer.diskStorage({
