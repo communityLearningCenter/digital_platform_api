@@ -10,8 +10,7 @@ router.get("/students", async(req, res) => {
             lcname: { // relation field
                 select: { lcname: true }, // only bring the name
             },
-        },
-        take: 20,
+        },        
     });
 
     const students = data.map(s => ({
@@ -241,8 +240,7 @@ router.get("/examresults", async(req, res) => {
                     }
                 }                
             }    
-        },
-        take: 20,
+        },        
     });
 
     const examresults = data.map(s => ({...s, 
@@ -292,6 +290,21 @@ router.get("/learningcenters/:id/examresults", async(req, res) => {
     catch(e){
         res.status(500).json({error:e});
     }
+});
+
+router.delete("/examResults/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await prisma.examResults.delete({
+      where: { id: Number(id) },
+    });
+
+    res.json({ message: "Exam Results are deleted successfully" });
+  } catch (e) {
+    console.error("Error deleting exam results:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = {studentRouter: router};
