@@ -11,7 +11,7 @@ const baseUrl = process.env.VITE_API_URL || `https://digital-platform-client.onr
 // Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = path.join(__dirname, "..", "Profile Images");
+    const dir = path.join(__dirname, "..", "profile_imgs");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -23,15 +23,19 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+const desiredName = (original) => {
+  return original
+    .replace(/\s+/g, '_')                   // spaces -> underscores
+}
 
 // API route
 router.post("/upload-profile", upload.single("image"), async (req, res) => {    
     try {
-    const username = req.body.username;
+    const username =  desiredName(req.body.username);
     const ext = path.extname(req.file.originalname);
     const filename = `${username}_profile${ext}`;
     //const filePath = path.join("Profile Images", filename); // relative path
-    const fileUrl = `${baseUrl}/profile-images/${filename}`;
+    const fileUrl = `${baseUrl}/profile_imgs/${filename}`;
     console.log(fileUrl);
 ;
 
