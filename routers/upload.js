@@ -6,7 +6,7 @@ const path = require("path");
 const prisma = require("../prismaClient");
 
 const router = express.Router();
-const baseUrl = process.env.VITE_API_URL || `http://localhost:${process.env.PORT || 8000}`;
+const baseUrl = process.env.VITE_API_URL || `https://digital-platform-client.onrender.com/`;
 
 // Multer storage config
 const storage = multer.diskStorage({
@@ -32,6 +32,7 @@ router.post("/upload-profile", upload.single("image"), async (req, res) => {
     const filename = `${username}_profile${ext}`;
     //const filePath = path.join("Profile Images", filename); // relative path
     const fileUrl = `${baseUrl}/profile-images/${filename}`;
+    console.log(fileUrl);
 ;
 
     // Update User table
