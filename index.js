@@ -3,9 +3,7 @@ const app = express();
 const prisma = require ("./prismaClient");
 const cors = require ("cors");
 const path = require("path");
-app.use(cors({
-    origin: ["http://localhost:3000", "https://digital-platform.onrender.com"]
-}));
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
