@@ -76,11 +76,12 @@ router.get("/learningcenters/:id/students", async (req, res) => {
 
 
 router.post("/postStudent", async(req, res) => {
+  try{
     const { lcname, acayr, name, stuID, grade, gender, pwd, guardianName, guardianNRC, familyMember, 
         over18Male, over18Female, under18Male, under18Female, stuStatus, acaReview, kidsClubStu, dropoutStu } = req.body;
     if(!lcname || !name || !stuID){        
-        return res.status(400).json({msg: "name, role and password required"});
-    }
+        return res.status(400).json({msg: "Learning Center, Student Name and Student ID required"});
+    }   
  
     const learningCenter = await prisma.learningCenter.findUnique({
             where: { lcname: lcname }, // assuming "name" is unique in LearningCenter model
@@ -90,12 +91,25 @@ router.post("/postStudent", async(req, res) => {
             return res.status(404).json({ msg: "Learning center not found" });
     }
 
+    const existingstudent = await prisma.student.findUnique({
+            where: { stuID: stuID }
+    });
+
+    if(existingstudent){
+      return res.status(409).json({ msg: "Student ID Already Exists" });
+    }
+
     const student = await prisma.student.create({
         data: { acayr, name, stuID, grade, gender, pwd, guardianName, guardianNRC, familyMember, 
         over18Male, over18Female, under18Male, under18Female, stuStatus, acaReview, kidsClubStu, dropoutStu, lcname: { connect: { id: learningCenter.id } }, },
     });
 
     res.json(student);
+  }
+  catch(e){
+    console.error("Error creating student:", e);
+    res.status(500).json({ msg: "Internal server error", error: e.message });
+  }    
 });
 
 router.put("/students/:id", async (req, res) => {
