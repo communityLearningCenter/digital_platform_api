@@ -10,7 +10,8 @@ router.get("/students", async(req, res) => {
             lcname: { // relation field
                 select: { lcname: true }, // only bring the name
             },
-        },        
+        },   
+        orderBy : {id: "asc"},     
     });
 
     const students = data.map(s => ({
@@ -115,12 +116,19 @@ router.post("/postStudent", async(req, res) => {
 router.put("/students/:id", async (req, res) => {
   const { id } = req.params;
   const data = req.body;
-
   try {
+    const learningCenter = await prisma.learningCenter.findUnique({
+            where: { lcname: data.lcname }, // assuming "name" is unique in LearningCenter model
+    });
+
+    if (!learningCenter) {
+            return res.status(404).json({ msg: "Learning center not found" });
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id: Number(id) },
       data: {
-        lcID: data.lcID,  // or map lcname -> lcID if needed
+        lcname: { connect: { id: learningCenter.id } },
         acayr: data.acayr,
         name: data.name,
         stuID: data.stuID,
@@ -287,8 +295,7 @@ router.get("/learningcenters/:id/examresults", async(req, res) => {
                     },
                 },
                 },
-            },
-            take: 20,
+            },            
         });
 
         const examresults = data.map(s => ({...s, 

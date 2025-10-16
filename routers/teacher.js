@@ -30,8 +30,7 @@ router.get("/teachers", async(req, res) => {
         const data = await prisma.teacher.findMany({        
         include: {
             lcname: true,
-        },
-        take: 20,
+        },        
     });
 
     const teachers = data.map(t => ({
