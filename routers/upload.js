@@ -11,12 +11,12 @@ const baseUrl = process.env.VITE_API_URL || `https://digital-platform-client.onr
 // Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = path.join(__dirname, "..", "profile_imgs");
+    const dir = path.join(__dirname, "..", "Profile Images");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: function (req, file, cb) {
-    const username = req.query.username; // get from query
+    const username = desiredName(req.query.username); // get from query
     const ext = path.extname(file.originalname);
     cb(null, `${username}_profile${ext}`);
   }
@@ -30,19 +30,17 @@ const desiredName = (original) => {
 
 // API route
 router.post("/upload-profile", upload.single("image"), async (req, res) => {    
-    try {
-    const username =  desiredName(req.body.username);
-    const ext = path.extname(req.file.originalname);
-    const filename = `${username}_profile${ext}`;
-    //const filePath = path.join("Profile Images", filename); // relative path
-    const fileUrl = `${baseUrl}/profile_imgs/${filename}`;
-    console.log(fileUrl);
-;
+    try {      
+      const username =  desiredName(req.body.username);
+      const ext = path.extname(req.file.originalname);
+      const filename = `${username}_profile${ext}`;
+      //const filePath = path.join("Profile Images", filename); // relative path
+      const fileUrl = `${baseUrl}/profile-images/${filename}`;//`http://localhost:8000/profile-images/${filename}`;      
 
-    // Update User table
-    const updatedUser = await prisma.user.update({
-      where: { name: username },
-      data: { avatarUrl: fileUrl }
+      // Update User table
+      const updatedUser = await prisma.user.update({
+        where: { name: req.body.username },
+        data: { avatarUrl: fileUrl }
     });
 
     res.json({ message: "File uploaded!", user: updatedUser });
