@@ -22,7 +22,8 @@ app.use("/", teacherRouter);
 
 const {uploadRouter} = require("./routers/upload");
 app.use("/", uploadRouter);
-app.use("/profile-images", express.static(path.join(__dirname, "Profile Images")));
+//app.use("/profile-images", express.static(path.join(__dirname, "Profile Images")));
+app.use("/profile-images", express.static(process.env.UPLOAD_MOUNT));
 
 app.get("/info", (req, res) => {
     res.json({msg: "Digital Platform"});

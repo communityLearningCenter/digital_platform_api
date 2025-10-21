@@ -54,7 +54,7 @@ router.post("/upload-profile", upload.single("image"), async (req, res) => {
       const ext = path.extname(req.file.originalname);
       const filename = `${username}_profile${ext}`;
       //const filePath = path.join("Profile Images", filename); // relative path
-      const fileUrl = `${baseUrl}/profile-images/${filename}`;//`http://localhost:8000/profile-images/${filename}`;      
+      const fileUrl = `${baseUrl}/profile-images/${filename}`;//`${UPLOAD_MOUNT}/${filename}`;//`http://localhost:8000/profile-images/${filename}`;      
 
       // Update User table
       const updatedUser = await prisma.user.update({
