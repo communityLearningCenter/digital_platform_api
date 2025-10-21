@@ -4,6 +4,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const prisma = require("../prismaClient");
+const app = express();
 
 const router = express.Router();
 const baseUrl = process.env.VITE_API_URL || `https://digital-platform-client.onrender.com`;
