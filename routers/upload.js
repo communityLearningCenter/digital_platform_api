@@ -29,6 +29,9 @@ if (!fs.existsSync(UPLOAD_MOUNT)) {
   fs.mkdirSync(UPLOAD_MOUNT, { recursive: true });
 }
 
+// Serve uploaded files publicly
+app.use("/profile-images", express.static(UPLOAD_MOUNT));
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // write files directly to the mount path (absolute)
