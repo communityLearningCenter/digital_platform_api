@@ -1,76 +1,67 @@
-
+// routes/upload.js
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const prisma = require("../prismaClient");
-const app = express();
 
 const router = express.Router();
-const baseUrl = process.env.VITE_API_URL || `https://digital-platform-client.onrender.com`;
 
-// Multer storage config
-/*const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = path.join(__dirname, "..", "Profile Images");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const username = desiredName(req.query.username); // get from query
-    const ext = path.extname(file.originalname);
-    cb(null, `${username}_profile${ext}`);
-  }
-});*/
+// Base URL for client links (optional)
+const baseUrl = process.env.VITE_API_URL || `http://localhost:8000`;
 
-const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || "/data/profile-images";
+// Helper function to sanitize usernames
+const desiredName = (original) => original.replace(/\s+/g, "_");
 
-// ensure dir exists at runtime
+// Upload folder (absolute path)
+const UPLOAD_MOUNT =
+  process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile_images");
+
+// Ensure the folder exists
 if (!fs.existsSync(UPLOAD_MOUNT)) {
   fs.mkdirSync(UPLOAD_MOUNT, { recursive: true });
+  console.log("✅ Created upload folder at:", UPLOAD_MOUNT);
+} else {
+  console.log("📂 Using existing upload folder:", UPLOAD_MOUNT);
 }
 
-// Serve uploaded files publicly
-app.use("/profile-images", express.static(UPLOAD_MOUNT));
-
+// Multer storage configuration
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // write files directly to the mount path (absolute)
-    cb(null, UPLOAD_MOUNT);
-  },
-  filename: function (req, file, cb) {
+  destination: (req, file, cb) => cb(null, UPLOAD_MOUNT),
+  filename: (req, file, cb) => {
     const username = desiredName(req.query.username || req.body.username || "user");
     const ext = path.extname(file.originalname) || ".jpg";
     cb(null, `${username}_profile${ext}`);
-  }
+  },
 });
 
 const upload = multer({ storage });
-const desiredName = (original) => {
-  return original
-    .replace(/\s+/g, '_')                   // spaces -> underscores
-}
 
-// API route
-router.post("/upload-profile", upload.single("image"), async (req, res) => {    
-    try {      
-      const username =  desiredName(req.body.username);
-      const ext = path.extname(req.file.originalname);
-      const filename = `${username}_profile${ext}`;
-      //const filePath = path.join("Profile Images", filename); // relative path
-      const fileUrl = `${baseUrl}/profile-images/${filename}`;//`${UPLOAD_MOUNT}/${filename}`;//`http://localhost:8000/profile-images/${filename}`;      
+// -----------------------------
+// ROUTES
+// -----------------------------
+router.post("/upload-profile", upload.single("image"), async (req, res) => {
+  try {
+    const username = desiredName(req.body.username);
+    const ext = path.extname(req.file.originalname);
+    const filename = `${username}_profile${ext}`;
 
-      // Update User table
-      const updatedUser = await prisma.user.update({
-        where: { name: req.body.username },
-        data: { avatarUrl: fileUrl }
+    // URL to return to client
+    const fileUrl = `${baseUrl}/profile-images/${filename}`;
+
+    // Update user record in database
+    const updatedUser = await prisma.user.update({
+      where: { name: req.body.username },
+      data: { avatarUrl: fileUrl },
     });
+
+    console.log("📤 File uploaded to:", req.file.path);
 
     res.json({ message: "File uploaded!", user: updatedUser });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Upload failed:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 });
 
-module.exports = {uploadRouter: router};
+module.exports = { uploadRouter: router };

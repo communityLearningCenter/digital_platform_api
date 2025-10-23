@@ -21,6 +21,10 @@ const {teacherRouter} = require("./routers/teacher");
 app.use("/", teacherRouter);
 
 const {uploadRouter} = require("./routers/upload");
+// Serve uploaded files publicly (main app)
+const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile_images");
+app.use("/profile-images", express.static(UPLOAD_MOUNT));
+// Mount your router
 app.use("/", uploadRouter);
 //app.use("/profile-images", express.static(path.join(__dirname, "Profile Images")));
 
