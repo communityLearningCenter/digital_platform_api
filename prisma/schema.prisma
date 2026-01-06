@@ -109,3 +109,9 @@ model ExamResults {
   createdOn DateTime @default(now()) 
   modifiedOn DateTime @default(now())
 }
+
+model AcademicYear {
+  id Int @id @default(autoincrement())
+  acaYr String
+  status String
+}
