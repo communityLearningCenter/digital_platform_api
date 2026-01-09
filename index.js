@@ -14,6 +14,9 @@ app.use("/", userRouter);
 const {learningCenterRouter} = require("./routers/learningcenter");
 app.use("/", learningCenterRouter);
 
+const {academicYearRouter} = require("./routers/academicyear");
+app.use("/", academicYearRouter);
+
 const {studentRouter} = require("./routers/student");
 app.use("/", studentRouter);
 

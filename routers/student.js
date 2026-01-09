@@ -64,8 +64,6 @@ router.get("/stuCountbyAcaYr", async (req, res) => {
       }
     });
 
-    console.log("result : ", result)
-
     res.json(
       result.map(r => ({
         academicYear: r.acayr,
@@ -84,8 +82,6 @@ router.get("/stuCountbyGrade", async (req, res) => {
       by: ["grade"],
       _count: { id: true },
     });
-
-    console.log("result : ", result);
 
     // Map and sort logically: KG first, then G-1..G-10 numerically
     const sorted = result

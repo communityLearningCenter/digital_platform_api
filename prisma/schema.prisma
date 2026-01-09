@@ -13,12 +13,13 @@ datasource db {
 model LearningCenter {
   id Int @id @default(autoincrement())
   lcname String @unique
-  region String
+  region String 
+  status String @default("Active")
   users   User[]
   students Student[]
   teachers Teacher[]
   createdOn DateTime @default(now())
-  modifiedOn DateTime @default(now())
+  modifiedOn DateTime @updatedAt
 }
 
 model User {
