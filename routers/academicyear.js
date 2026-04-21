@@ -29,7 +29,6 @@ router.put("/acayrs/:id", async (req, res) => {
 
     res.json(updatedAcaYr);
   } catch (e) {
-    console.error("Error updating academic year:", e); 
     res.status(500).json({ error: e.message });
   }
 });

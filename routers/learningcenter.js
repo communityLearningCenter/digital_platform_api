@@ -58,24 +58,4 @@ router.get("/users/:id/learningcenters", async (req, res) => {
   }
 });
 
-
-/*router.get("/users/:id/learningcenters", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const data = await prisma.student.findMany({
-      where: { lcID: Number(id) },
-      include: {
-        examresults: true,
-        lcname: {
-          select: { lcname: true }, // only fetch the LearningCenter name
-        },
-      },
-    });
-    console.log("data : ", data);
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});*/
-
 module.exports = {learningCenterRouter: router};

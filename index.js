@@ -5,6 +5,11 @@ const cors = require ("cors");
 const path = require("path");
 app.use(cors());
 
+app.use((req, res, next) => {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 
@@ -24,11 +29,16 @@ const {teacherRouter} = require("./routers/teacher");
 app.use("/", teacherRouter);
 
 const {uploadRouter} = require("./routers/upload");
-// Serve uploaded files publicly (main app)
-const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile_images");
-app.use("/profile-images", express.static(UPLOAD_MOUNT));
 // Mount your router
 app.use("/", uploadRouter);
+
+// Serve uploaded files publicly (main app)
+const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data");//, "profile_images");
+//app.use("/profile-images", express.static(UPLOAD_MOUNT));
+//app.use("/teaching-materials", express.static(UPLOAD_MOUNT));
+app.use("/teaching-materials", express.static(path.join(UPLOAD_MOUNT, "teaching-materials")));
+app.use("/profile-images", express.static(path.join(UPLOAD_MOUNT, "profile-images")));
+
 //app.use("/profile-images", express.static(path.join(__dirname, "Profile Images")));
 
 app.get("/info", (req, res) => {

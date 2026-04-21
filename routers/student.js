@@ -25,11 +25,11 @@ router.get("/students", async(req, res) => {
     }
 });
 
-router.get("/registration/:id", async (req, res) => {
-  const { id } = req.params;
+router.get("/registration/id/:id", async (req, res) => {
+  const  id  = Number(req.params.id);
   try {
     const student = await prisma.student.findUnique({
-      where: { id: Number(id) },
+      where: { id: id },
       include: {
         lcname: true,       // relation field name in your Prisma model
         examresults: true,
@@ -51,6 +51,34 @@ router.get("/registration/:id", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+router.get("/registration/by-stuid/:stuID", async (req, res) => {
+  const { stuID } = req.params;
+  try {
+    const student = await prisma.student.findFirst({
+      where: { stuID: stuID },
+      include: {
+        lcname: true,       // relation field name in your Prisma model
+        examresults: true,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Flatten the relation safely
+    const result = {
+      ...student,
+      lcname: student.lcname ? student.lcname.lcname : null,
+    };
+
+    res.json(result); // ✅ send the correct object
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 router.get("/stuCountbyAcaYr", async (req, res) => {
   try {
@@ -76,10 +104,18 @@ router.get("/stuCountbyAcaYr", async (req, res) => {
   }
 });
 
-router.get("/stuCountbyGrade", async (req, res) => {
+router.get("/stuCountbyGrade", async (req, res) => {  
   try {
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
+
     const result = await prisma.student.groupBy({
       by: ["grade"],
+      where: {
+        acayr: acayr, // 👈 filter by year
+      },      
       _count: { id: true },
     });
 
@@ -146,13 +182,55 @@ router.get("/stuCountbyGender", async (req, res) => {
     res.json({ male, female });
 
   } catch (e) {
-    res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e.message });
   }
 });
 
+router.get("/stuCountbyEnrollStatus", async (req,res) => {
+  try{
+    const old_count = await prisma.student.count({
+      where: {stuStatus: "Old"}
+    });
+
+    const new_count = await prisma.student.count({
+      where: { stuStatus : "New"}
+    });
+
+    res.json({ old_count, new_count });
+  } catch (e) {
+      res.status(500).json({ error: e.message });
+  }
+})
+
+router.get("/pwdStuCountbyGender", async (req,res) => {
+  try{
+    const pwd_boy_count = await prisma.student.count({
+      where: {
+        pwd: "Yes",
+        gender : "Male"
+      }
+    });
+
+    const pwd_girl_count = await prisma.student.count({
+      where: { 
+        pwd: "Yes",
+        gender : "Female"}
+    });
+
+    res.json({ pwd_boy_count, pwd_girl_count });
+  } catch (e) {
+      res.status(500).json({ error: e.message });
+  }
+})
+
 router.get("/totalCountforDashboard", async (req, res) => {
   try{  
-    const totalStuCount = await prisma.student.count();
+    const {acayr} = req.query;
+    console.log("Aca Yr:", acayr)
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
+    const totalStuCount = await prisma.student.count({where: { acayr: acayr }});
 
     const totalTeacherCount = await prisma.teacher.count();
 
@@ -175,8 +253,6 @@ router.get("/learningcenters/:id/students", async (req, res) => {
        },
     });
 
-    //console.log("Students :", data)
-
     const students = data.map(s => ({
       ...s,
       lcname: s.lcname ? s.lcname.lcname : null // flatten safely
@@ -193,8 +269,8 @@ router.post("/postStudent", async(req, res) => {
   try{
     const { lcname, acayr, name, stuID, grade, gender, pwd, guardianName, guardianNRC, familyMember, 
         over18Male, over18Female, under18Male, under18Female, stuStatus, acaReview, kidsClubStu, dropoutStu } = req.body;
-    if(!lcname || !name || !stuID){        
-        return res.status(400).json({msg: "Learning Center, Student Name and Student ID required"});
+    if(!lcname || !name || !stuID || !grade){        
+        return res.status(400).json({msg: "Learning Center, Student Name, Student ID  and Grade are required"});
     }   
  
     const learningCenter = await prisma.learningCenter.findUnique({
@@ -205,8 +281,11 @@ router.post("/postStudent", async(req, res) => {
             return res.status(404).json({ msg: "Learning center not found" });
     }
 
-    const existingstudent = await prisma.student.findUnique({
-            where: { stuID: stuID }
+    const existingstudent = await prisma.student.findFirst({
+            where: { 
+              acayr: acayr,
+              stuID: stuID
+            }
     });
 
     if(existingstudent){
@@ -221,7 +300,6 @@ router.post("/postStudent", async(req, res) => {
     res.json(student);
   }
   catch(e){
-    console.error("Error creating student:", e);
     res.status(500).json({ msg: "Internal server error", error: e.message });
   }    
 });
@@ -265,7 +343,6 @@ router.put("/students/:id", async (req, res) => {
 
     res.json(updatedStudent);
   } catch (e) {
-    console.error("Error updating student:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -280,7 +357,6 @@ router.delete("/students/:id", async (req, res) => {
 
     res.json({ message: "Student deleted successfully" });
   } catch (e) {
-    console.error("Error deleting student:", e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -454,14 +530,12 @@ router.delete("/examResults/:id", async (req, res) => {
 
     res.json({ message: "Exam Results are deleted successfully" });
   } catch (e) {
-    console.error("Error deleting exam results:", e);
     res.status(500).json({ error: e.message });
   }
 });
 
 router.post("/postAvgMarksandGrade/:id", async(req, res) => {    
     const {submittedData} = req.params;    
-    console.log("submittedData in api : ", submittedData);
     // const learningCenter = await prisma.learningCenter.findUnique({
     //         where: { lcname: submittedData.lcname }, // assuming "name" is unique in LearningCenter model
     // });

@@ -44,4 +44,56 @@ router.get("/teachers", async(req, res) => {
     }
 });
 
+router.get("/teachers/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const data = await prisma.teacher.findUnique({
+      where: { id: Number(id) },
+      include: {
+        lcname: true
+      },
+    });
+
+    const result = {
+        ...data, lcname: data.lcname.lcname // flatten
+    };
+
+    res.json(result); // ✅ send the correct object
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put("/teachers/:id", async (req, res) => {
+  const { id } = req.params;
+  const data = req.body;
+  try {
+    const learningCenter = await prisma.learningCenter.findUnique({
+            where: { id: data.learningcenter.id }, // assuming "name" is unique in LearningCenter model
+    });
+
+    if (!learningCenter) {
+            return res.status(404).json({ msg: "Learning center not found" });
+    }
+
+    const updatedTeacher = await prisma.teacher.update({
+      where: { id: Number(id) },
+      data: {
+        lcname: { connect: { id: learningCenter.id } },
+        teacherName: data.name,
+        teacherNRC: data.nrc,
+        position: data.position,
+        status: data.status,
+        address: data.address,
+        phnumber: data.phno,
+        joinDate: data.joinDate ? new Date(data.joinDate) : null,
+        modifiedOn: new Date(),
+      },
+    });
+    res.json(updatedTeacher);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = {teacherRouter: router};

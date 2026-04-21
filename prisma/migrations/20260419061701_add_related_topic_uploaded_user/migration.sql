@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "File" ADD COLUMN     "relatedTopic" TEXT NOT NULL DEFAULT 'Kids Club',
+ADD COLUMN     "uploadedDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

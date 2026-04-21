@@ -11,10 +11,10 @@ datasource db {
 }
 
 model LearningCenter {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement())  
   lcname String @unique
   region String 
-  status String @default("Active")
+  status String @default("Active") 
   users   User[]
   students Student[]
   teachers Teacher[]
@@ -55,7 +55,7 @@ model Student {
   lcID Int
   acayr String
   name String
-  stuID String @unique
+  stuID String
   grade String
   gender String
   pwd String
@@ -115,4 +115,13 @@ model AcademicYear {
   id Int @id @default(autoincrement())
   acaYr String
   status String
+}
+
+model File {
+  id       Int    @id @default(autoincrement())
+  relatedTopic String @default("Kids Club")
+  name     String
+  url      String
+  userName String
+  uploadedDate DateTime @default(now()) 
 }
