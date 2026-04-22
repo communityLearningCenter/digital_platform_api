@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: digital_platform_api
+    env: node
+    plan: starter
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 5
