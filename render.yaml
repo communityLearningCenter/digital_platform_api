@@ -3,7 +3,9 @@ services:
     name: digital_platform_api
     env: node
     plan: starter
+    buildCommand: npm install
+    startCommand: index.js
     disk:
       name: data
-      mountPath: /data
+      mountPath: /opt/render/project/src/data
       sizeGB: 5
