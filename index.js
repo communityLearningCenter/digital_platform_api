@@ -33,11 +33,10 @@ const {uploadRouter} = require("./routers/upload");
 app.use("/", uploadRouter);
 
 // Serve uploaded files publicly (main app)
-const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data");//, "profile_images");
-//app.use("/profile-images", express.static(UPLOAD_MOUNT));
+const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile-images");
+app.use("/profile-images", express.static(UPLOAD_MOUNT));
 //app.use("/teaching-materials", express.static(UPLOAD_MOUNT));
-app.use("/teaching-materials", express.static(path.join(UPLOAD_MOUNT, "teaching-materials")));
-app.use("/profile-images", express.static(path.join(UPLOAD_MOUNT, "profile-images")));
+
 
 //app.use("/profile-images", express.static(path.join(__dirname, "Profile Images")));
 

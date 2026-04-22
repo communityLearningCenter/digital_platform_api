@@ -17,8 +17,8 @@ const sanitizeFileName = (name) => name.replace(/\s+/g, "_").replace(/[^\w.-]/g,
 // Upload folder (absolute path)
 //const UPLOAD_MOUNT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile_images");
 
-const UPLOAD_ROOT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data");
-const PROFILE_DIR = path.join(UPLOAD_ROOT, "profile-images");
+const UPLOAD_ROOT = process.env.UPLOAD_MOUNT || path.join(process.cwd(), "data", "profile-images");
+const PROFILE_DIR = path.join(UPLOAD_ROOT, "user-images");
 const MATERIAL_DIR = path.join(UPLOAD_ROOT, "teaching-materials");
 
 // Ensure the folder exists
@@ -67,7 +67,7 @@ router.post("/upload-profile", upload_profile.single("image"), async (req, res) 
     const filename = req.file.filename;//`${username}_profile${ext}`;
 
     // URL to return to client
-    const fileUrl = `${baseUrl}/profile-images/${filename}`;
+    const fileUrl = `${baseUrl}/profile-images/user-images/${filename}`;
 
     // Update user record in database
     const updatedUser = await prisma.user.update({
@@ -100,7 +100,7 @@ router.post("/upload-file", upload_materials.single("file"), async (req, res) =>
     //fs.renameSync(req.file.path, newPath);
 
     // ✅ URL to send back
-    const fileUrl = `${baseUrl}/teaching-materials/${filename}`;
+    const fileUrl = `${baseUrl}/profile-images/teaching-materials/${filename}`;
 
     console.log("📤 File uploaded:", filename);
 
