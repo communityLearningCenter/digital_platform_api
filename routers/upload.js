@@ -139,4 +139,42 @@ router.get("/files", async (req, res) => {
   }
 });
 
+router.delete("/files/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find file in DB
+    const file = await prisma.file.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    // Get file path from URL
+    const filename = file.url.split("/").pop();
+    const filePath = path.join(MATERIAL_DIR, filename);
+
+    // Delete file from disk
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log("🗑 Deleted file:", filePath);
+    } else {
+      console.warn("⚠ File not found on disk:", filePath);
+    }
+
+    // Delete from DB
+    await prisma.file.delete({
+      where: { id: Number(id) },
+    });
+
+    res.json({ message: "File deleted successfully" });
+
+  } catch (err) {
+    console.error("❌ Delete failed:", err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+
 module.exports = { uploadRouter: router };

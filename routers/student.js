@@ -143,10 +143,13 @@ router.get("/stuCountbyGrade", async (req, res) => {
 
 router.get("/kcStuCountbyLC", async (req, res) => {
   try {
+    const {acayr} = req.query;
     // Group by Learning Center ID (lcID)
     const result = await prisma.student.groupBy({
       by: ["lcID"],
-      where: { kidsClubStu: "Yes" }, // Only students in Kids Club
+      where: { kidsClubStu: "Yes",
+              acayr: acayr
+      }, // Only students in Kids Club
       _count: { id: true },
     });
 
@@ -171,12 +174,21 @@ router.get("/kcStuCountbyLC", async (req, res) => {
 
 router.get("/stuCountbyGender", async (req, res) => {
   try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
+
     const male = await prisma.student.count({
-      where: { gender: "Male" }
+      where: { gender: "Male",
+              acayr: acayr 
+       }
     });
 
     const female = await prisma.student.count({
-      where: { gender: "Female" }
+      where: { gender: "Female",
+                acayr: acayr 
+       }
     });
 
     res.json({ male, female });
@@ -187,13 +199,21 @@ router.get("/stuCountbyGender", async (req, res) => {
 });
 
 router.get("/stuCountbyEnrollStatus", async (req,res) => {
+  const {acayr} = req.query;
+  if (!acayr) {
+      return res.status(400).json({ error: "Academic year is required" });
+  }
   try{
     const old_count = await prisma.student.count({
-      where: {stuStatus: "Old"}
+      where: {stuStatus: "Old",
+              acayr: acayr
+      }
     });
 
     const new_count = await prisma.student.count({
-      where: { stuStatus : "New"}
+      where: { stuStatus : "New",
+              acayr: acayr
+      }
     });
 
     res.json({ old_count, new_count });
@@ -203,18 +223,24 @@ router.get("/stuCountbyEnrollStatus", async (req,res) => {
 })
 
 router.get("/pwdStuCountbyGender", async (req,res) => {
+  const {acayr} = req.query;
+  if (!acayr) {
+      return res.status(400).json({ error: "Academic year is required" });
+  }
   try{
     const pwd_boy_count = await prisma.student.count({
       where: {
         pwd: "Yes",
-        gender : "Male"
+        gender : "Male",
+        acayr: acayr
       }
     });
 
     const pwd_girl_count = await prisma.student.count({
       where: { 
         pwd: "Yes",
-        gender : "Female"}
+        gender : "Female",
+        acayr: acayr}
     });
 
     res.json({ pwd_boy_count, pwd_girl_count });
@@ -226,15 +252,14 @@ router.get("/pwdStuCountbyGender", async (req,res) => {
 router.get("/totalCountforDashboard", async (req, res) => {
   try{  
     const {acayr} = req.query;
-    console.log("Aca Yr:", acayr)
     if (!acayr) {
         return res.status(400).json({ error: "Academic year is required" });
     }
     const totalStuCount = await prisma.student.count({where: { acayr: acayr }});
 
-    const totalTeacherCount = await prisma.teacher.count();
+    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active" }});
 
-    const totalLCCount = await prisma.learningCenter.count();
+    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active" }});
 
     res.json({ totalStuCount, totalTeacherCount, totalLCCount });
   } catch (e) {
@@ -267,7 +292,7 @@ router.get("/learningcenters/:id/students", async (req, res) => {
 
 router.post("/postStudent", async(req, res) => {
   try{
-    const { lcname, acayr, name, stuID, grade, gender, pwd, guardianName, guardianNRC, familyMember, 
+    const { lcname, acayr, name, stuID, grade, gender, pwd, pwd_type, guardianName, guardianNRC, guardianType, familyMember, 
         over18Male, over18Female, under18Male, under18Female, stuStatus, acaReview, kidsClubStu, dropoutStu } = req.body;
     if(!lcname || !name || !stuID || !grade){        
         return res.status(400).json({msg: "Learning Center, Student Name, Student ID  and Grade are required"});
@@ -293,7 +318,7 @@ router.post("/postStudent", async(req, res) => {
     }
 
     const student = await prisma.student.create({
-        data: { acayr, name, stuID, grade, gender, pwd, guardianName, guardianNRC, familyMember, 
+        data: { acayr, name, stuID, grade, gender, pwd, pwd_type, guardianName, guardianNRC, guardianType, familyMember, 
         over18Male, over18Female, under18Male, under18Female, stuStatus, acaReview, kidsClubStu, dropoutStu, lcname: { connect: { id: learningCenter.id } }, },
     });
 
@@ -326,8 +351,10 @@ router.put("/students/:id", async (req, res) => {
         grade: data.grade,
         gender: data.gender,
         pwd: data.pwd,
+        pwd_type: data.pwd_type,
         guardianName: data.guardianName,
         guardianNRC: data.guardianNRC,
+        guardianType: data.guardianType,
         familyMember: data.familyMember,
         over18Male: data.over18Male,
         over18Female: data.over18Female,
@@ -556,9 +583,14 @@ router.post("/postAvgMarksandGrade/:id", async(req, res) => {
 
 router.get("/gradingCountforLPforFirstSession", async (req, res) => {
   try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
     const countA = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "A",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -568,6 +600,7 @@ router.get("/gradingCountforLPforFirstSession", async (req, res) => {
     const countE = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "E",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -577,6 +610,7 @@ router.get("/gradingCountforLPforFirstSession", async (req, res) => {
     const countS = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "S",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -590,9 +624,14 @@ router.get("/gradingCountforLPforFirstSession", async (req, res) => {
 
 router.get("/gradingCountforLPforSecondSession", async (req, res) => {
   try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
     const countA = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "A",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -602,6 +641,7 @@ router.get("/gradingCountforLPforSecondSession", async (req, res) => {
     const countE = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "E",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -611,6 +651,7 @@ router.get("/gradingCountforLPforSecondSession", async (req, res) => {
     const countS = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "S",
+              acayr: acayr,
               student: {
                 grade: { in: ["KG", "G-1", "G-2", "G-3"] }
               }
@@ -624,9 +665,14 @@ router.get("/gradingCountforLPforSecondSession", async (req, res) => {
 
 router.get("/gradingCountforUPforFirstSession", async (req, res) => {
   try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
     const countA = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "A",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -636,6 +682,7 @@ router.get("/gradingCountforUPforFirstSession", async (req, res) => {
     const countB = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "B",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -645,6 +692,7 @@ router.get("/gradingCountforUPforFirstSession", async (req, res) => {
     const countC = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "C",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -654,6 +702,7 @@ router.get("/gradingCountforUPforFirstSession", async (req, res) => {
     const countD = await prisma.examResults.count({
       where: { session: "First Time",
               average_grade: "D",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -667,9 +716,14 @@ router.get("/gradingCountforUPforFirstSession", async (req, res) => {
 
 router.get("/gradingCountforUPforSecondSession", async (req, res) => {
   try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
     const countA = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "A",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -679,6 +733,7 @@ router.get("/gradingCountforUPforSecondSession", async (req, res) => {
     const countB = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "B",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -688,6 +743,7 @@ router.get("/gradingCountforUPforSecondSession", async (req, res) => {
     const countC = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "C",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }
@@ -697,6 +753,7 @@ router.get("/gradingCountforUPforSecondSession", async (req, res) => {
     const countD = await prisma.examResults.count({
       where: { session: "Second Time",
               average_grade: "D",
+              acayr: acayr,
               student: {
                 grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
               }

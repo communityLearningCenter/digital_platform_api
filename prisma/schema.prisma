@@ -59,8 +59,10 @@ model Student {
   grade String
   gender String
   pwd String
+  pwd_type String @default("")
   guardianName String @map("gurdianName")  // keeps old DB column
   guardianNRC  String @map("gurdianNRC")   // keeps old DB column
+  guardianType String @default("")
   familyMember Int
   over18Male Int
   over18Female Int
@@ -79,6 +81,7 @@ model ExamResults {
   id Int @id @default(autoincrement())
   student Student @relation (fields: [studentID], references:[id])
   studentID Int
+  acayr String @default("2025 - 2026")
   session String
   myanmar_mark Int
   myanmar_grade String
