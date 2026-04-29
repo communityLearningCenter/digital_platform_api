@@ -401,7 +401,7 @@ router.post("/postExamResults", async(req, res) => {
         return res.status(404).json({ msg: "Learning center not found" });
     }    
 
-    const student = await prisma.student.findUnique({
+    const student = await prisma.student.findFirst({
         where: { stuID: submittedData.student.stuID }
     });
     if (!student) {
