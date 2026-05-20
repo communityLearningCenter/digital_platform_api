@@ -28,6 +28,7 @@ router.get("/students", async(req, res) => {
 router.get("/registration/id/:id", async (req, res) => {
   const  id  = Number(req.params.id);
   try {
+    console.log("id: ",id)
     const student = await prisma.student.findUnique({
       where: { id: id },
       include: {

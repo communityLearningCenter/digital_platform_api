@@ -4,6 +4,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const prisma = require("../prismaClient");
+const mime = require("mime-types");
 
 const router = express.Router();
 
@@ -136,6 +137,46 @@ router.get("/files", async (req, res) => {
   } catch (err) {
     console.error("❌ Fetch files failed:", err);
     res.status(500).json({ error: "Failed to fetch files" });
+  }
+});
+
+router.get("/download/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("file id : ", id);
+    const file = await prisma.file.findUnique({
+      where: { id: Number(id) },
+    });
+    console.log("file : ", file);
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    const filename = file.url.split("/").pop();
+    const filePath = path.join(MATERIAL_DIR, filename);
+
+    console.log("filename : ", filename);
+    console.log("filepath : ", filePath);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Physical file missing" });
+      console.log("File Missing");
+    }
+
+    const mimeType = mime.lookup(filename) || "application/octet-stream";
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.name}"`
+    );
+
+    res.setHeader("Content-Type", mimeType);
+
+    res.sendFile(filePath);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Download failed" });
   }
 });
 
