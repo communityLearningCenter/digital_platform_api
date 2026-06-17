@@ -121,10 +121,11 @@ model AcademicYear {
 }
 
 model File {
-  id       Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   relatedTopic String @default("Kids Club")
-  name     String
-  url      String
+  module String
+  name String
+  url String
   userName String
   uploadedDate DateTime @default(now()) 
 }

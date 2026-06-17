@@ -103,18 +103,20 @@ router.post("/upload-file", upload_materials.single("file"), async (req, res) =>
     // ✅ URL to send back
     const fileUrl = `${baseUrl}/profile-images/teaching-materials/${filename}`;
 
-    console.log("📤 File uploaded:", filename);
-
     // 👉 OPTIONAL: save to DB (recommended)
     await prisma.file.create({
        data: {
-         name: req.file.originalname,
-         url: fileUrl,
-         userName: username,
+          relatedTopic: req.body.topic,
+          module: req.body.module,
+          name: req.file.originalname,
+          url: fileUrl,
+          userName: username,
        },
      });
 
     res.json({
+      relatedTopic: req.file.topic,
+      module: req.file.module,
       url: fileUrl,
       name: req.file.originalname,
     });
@@ -143,20 +145,16 @@ router.get("/files", async (req, res) => {
 router.get("/download/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("file id : ", id);
     const file = await prisma.file.findUnique({
       where: { id: Number(id) },
     });
-    console.log("file : ", file);
+    
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
 
     const filename = file.url.split("/").pop();
     const filePath = path.join(MATERIAL_DIR, filename);
-
-    console.log("filename : ", filename);
-    console.log("filepath : ", filePath);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "Physical file missing" });
