@@ -173,6 +173,36 @@ router.get("/kcStuCountbyLC", async (req, res) => {
   }
 });
 
+router.get("/allStuCountbyLC", async (req, res) => {
+  try {
+    const {acayr} = req.query;
+    // Group by Learning Center ID (lcID)
+    const result = await prisma.student.groupBy({
+      by: ["lcID"],
+      where: { acayr: acayr
+      },
+      _count: { id: true },
+    });
+
+    // Fetch LC names for each lcID
+    const dataWithLCName = await Promise.all(
+      result.map(async (r) => {
+        const lc = await prisma.learningCenter.findUnique({
+          where: { id: r.lcID },
+        });
+        return {
+          lcname: lc ? lc.lcname : "Unknown",
+          count: r._count.id,
+        };
+      })
+    );
+
+    res.json(dataWithLCName);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/stuCountbyGender", async (req, res) => {
   try{
     const {acayr} = req.query;
