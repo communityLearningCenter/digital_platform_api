@@ -104,9 +104,10 @@ router.post("/upload-file", upload_materials.single("file"), async (req, res) =>
     const fileUrl = `${baseUrl}/profile-images/teaching-materials/${filename}`;
 
     // 👉 OPTIONAL: save to DB (recommended)
+    console.log("req.body : ", req.body);
     await prisma.file.create({
        data: {
-          relatedTopic: req.body.topic,
+          relatedTopic: req.body.relatedTopic,
           module: req.body.module,
           name: req.file.originalname,
           url: fileUrl,
@@ -115,8 +116,8 @@ router.post("/upload-file", upload_materials.single("file"), async (req, res) =>
      });
 
     res.json({
-      relatedTopic: req.file.topic,
-      module: req.file.module,
+      relatedTopic: req.body.relatedTopic,
+      module: req.body.module,
       url: fileUrl,
       name: req.file.originalname,
     });
