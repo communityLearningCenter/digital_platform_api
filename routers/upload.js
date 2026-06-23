@@ -104,7 +104,6 @@ router.post("/upload-file", upload_materials.single("file"), async (req, res) =>
     const fileUrl = `${baseUrl}/profile-images/teaching-materials/${filename}`;
 
     // 👉 OPTIONAL: save to DB (recommended)
-    console.log("req.body : ", req.body);
     await prisma.file.create({
        data: {
           relatedTopic: req.body.relatedTopic,
