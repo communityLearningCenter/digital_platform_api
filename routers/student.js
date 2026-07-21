@@ -178,7 +178,9 @@ router.get("/allStuCountbyLC", async (req, res) => {
     // Group by Learning Center ID (lcID)
     const result = await prisma.student.groupBy({
       by: ["lcID"],
-      where: { acayr: acayr
+      where: { acayr: acayr, grade: {
+          not: "Preschool",
+        },
       },
       _count: { id: true },
     });
