@@ -287,11 +287,11 @@ router.get("/totalCountforDashboard", async (req, res) => {
     if (!acayr) {
         return res.status(400).json({ error: "Academic year is required" });
     }
-    const totalStuCount = await prisma.student.count({where: { acayr: acayr }});
+    const totalStuCount = await prisma.student.count({where: { acayr: acayr, grade: { not: "Preschool" } }});
 
-    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active" }});
+    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active", grade: { not: "Preschool" } }});
 
-    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active" }});
+    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active", grade: { not: "Preschool" } }});
 
     res.json({ totalStuCount, totalTeacherCount, totalLCCount });
   } catch (e) {
