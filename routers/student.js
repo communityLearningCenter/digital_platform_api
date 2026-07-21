@@ -148,7 +148,8 @@ router.get("/kcStuCountbyLC", async (req, res) => {
     const result = await prisma.student.groupBy({
       by: ["lcID"],
       where: { kidsClubStu: "Yes",
-              acayr: acayr
+              acayr: acayr,
+              grade: { not: "Preschool" }
       }, // Only students in Kids Club
       _count: { id: true },
     });
@@ -178,9 +179,8 @@ router.get("/allStuCountbyLC", async (req, res) => {
     // Group by Learning Center ID (lcID)
     const result = await prisma.student.groupBy({
       by: ["lcID"],
-      where: { acayr: acayr, grade: {
-          not: "Preschool",
-        },
+      where: { acayr: acayr, 
+        grade: { not: "Preschool" }
       },
       _count: { id: true },
     });
@@ -213,13 +213,15 @@ router.get("/stuCountbyGender", async (req, res) => {
 
     const male = await prisma.student.count({
       where: { gender: "Male",
-              acayr: acayr 
+              acayr: acayr,
+              grade: { not: "Preschool" }
        }
     });
 
     const female = await prisma.student.count({
       where: { gender: "Female",
-                acayr: acayr 
+                acayr: acayr,
+                grade: { not: "Preschool" }
        }
     });
 
@@ -238,13 +240,15 @@ router.get("/stuCountbyEnrollStatus", async (req,res) => {
   try{
     const old_count = await prisma.student.count({
       where: {stuStatus: "Old",
-              acayr: acayr
+              acayr: acayr,
+              grade: { not: "Preschool" }
       }
     });
 
     const new_count = await prisma.student.count({
       where: { stuStatus : "New",
-              acayr: acayr
+              acayr: acayr,
+              grade: { not: "Preschool" }
       }
     });
 
@@ -264,7 +268,8 @@ router.get("/pwdStuCountbyGender", async (req,res) => {
       where: {
         pwd: "Yes",
         gender : "Male",
-        acayr: acayr
+        acayr: acayr,
+        grade: { not: "Preschool" }
       }
     });
 
@@ -272,7 +277,9 @@ router.get("/pwdStuCountbyGender", async (req,res) => {
       where: { 
         pwd: "Yes",
         gender : "Female",
-        acayr: acayr}
+        acayr: acayr,
+        grade: { not: "Preschool" }
+    }
     });
 
     res.json({ pwd_boy_count, pwd_girl_count });
@@ -289,9 +296,9 @@ router.get("/totalCountforDashboard", async (req, res) => {
     }
     const totalStuCount = await prisma.student.count({where: { acayr: acayr, grade: { not: "Preschool" } }});
 
-    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active", grade: { not: "Preschool" } }});
+    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active"}});
 
-    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active", grade: { not: "Preschool" } }});
+    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active" }});
 
     res.json({ totalStuCount, totalTeacherCount, totalLCCount });
   } catch (e) {
