@@ -3,14 +3,16 @@ const router = express.Router();
 const prisma = require("../prismaClient");
 
 router.get("/students", async(req, res) => {
+  const { acayr } = req.query;
     try{
-        const data = await prisma.student.findMany({        
-        include: {
-            examresults: true, 
-            lcname: { // relation field
-                select: { lcname: true }, // only bring the name
-            },
-        },   
+        const data = await prisma.student.findMany({   
+          where: acayr ? { acayr } : {},     
+          include: {
+              examresults: true, 
+              lcname: { // relation field
+                  select: { lcname: true }, // only bring the name
+              },
+          },   
         orderBy : {id: "asc"},     
     });
 
@@ -23,6 +25,31 @@ router.get("/students", async(req, res) => {
     catch(e){
         res.status(500).json({error:e});
     }
+});
+
+router.get("/learningcenters/:id/students", async (req, res) => {
+  const { id } = req.params;
+  const { acayr } = req.query;
+  try {
+    const data = await prisma.student.findMany({
+      where: { lcID: Number(id),
+        ...(acayr && { acayr }),
+      },
+       include: {
+         lcname: true,        
+       },
+       orderBy : {id: "asc"},     
+    });
+
+    const students = data.map(s => ({
+      ...s,
+      lcname: s.lcname ? s.lcname.lcname : null // flatten safely
+    }));
+
+    res.json(students);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.get("/registration/id/:id", async (req, res) => {
@@ -143,35 +170,112 @@ router.get("/stuCountbyGrade", async (req, res) => {
 
 router.get("/kcStuCountbyLC", async (req, res) => {
   try {
-    const {acayr} = req.query;
-    // Group by Learning Center ID (lcID)
+    const { acayr } = req.query;
+
+    // Group by Learning Center and Gender
     const result = await prisma.student.groupBy({
-      by: ["lcID"],
-      where: { kidsClubStu: "Yes",
-              acayr: acayr,
-              grade: { not: "Preschool" }
-      }, // Only students in Kids Club
-      _count: { id: true },
+      by: ["lcID", "gender"],
+      where: {
+        kidsClubStu: "Yes",
+        acayr: acayr,
+        grade: { not: "Preschool" }
+      },
+      _count: {
+        id: true
+      }
     });
 
-    // Fetch LC names for each lcID
-    const dataWithLCName = await Promise.all(
-      result.map(async (r) => {
-        const lc = await prisma.learningCenter.findUnique({
-          where: { id: r.lcID },
-        });
-        return {
-          lcname: lc ? lc.lcname : "Unknown",
-          count: r._count.id,
+    // Get unique Learning Center IDs
+    const lcIDs = [...new Set(result.map((r) => r.lcID))];
+
+    // Fetch Learning Center names
+    const learningCenters = await prisma.learningCenter.findMany({
+      where: {
+        id: {
+          in: lcIDs
+        }
+      },
+      select: {
+        id: true,
+        lcname: true
+      }
+    });
+
+    // Create LC lookup
+    const lcMap = {};
+
+    learningCenters.forEach((lc) => {
+      lcMap[lc.id] = lc.lcname;
+    });
+
+    // Reshape data for stacked bar chart
+    const grouped = {};
+
+    result.forEach((r) => {
+      if (!grouped[r.lcID]) {
+        grouped[r.lcID] = {
+          lcname: lcMap[r.lcID] || "Unknown",
+          male: 0,
+          female: 0,
+          count: 0
         };
-      })
-    );
+      }
+
+      if (r.gender === "Male") {
+        grouped[r.lcID].male = r._count.id;
+      }
+
+      if (r.gender === "Female") {
+        grouped[r.lcID].female = r._count.id;
+      }
+
+      grouped[r.lcID].count += r._count.id;
+    });
+
+    const dataWithLCName = Object.values(grouped);
 
     res.json(dataWithLCName);
+
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+
+    res.status(500).json({
+      error: e.message
+    });
   }
 });
+
+// router.get("/kcStuCountbyLC", async (req, res) => {
+//   try {
+//     const {acayr} = req.query;
+//     // Group by Learning Center ID (lcID)
+//     const result = await prisma.student.groupBy({
+//       by: ["lcID"],
+//       where: { kidsClubStu: "Yes",
+//               acayr: acayr,
+//               grade: { not: "Preschool" }
+//       }, // Only students in Kids Club
+//       _count: { id: true },
+//     });
+
+//     // Fetch LC names for each lcID
+//     const dataWithLCName = await Promise.all(
+//       result.map(async (r) => {
+//         const lc = await prisma.learningCenter.findUnique({
+//           where: { id: r.lcID },
+//         });
+//         return {
+//           lcname: lc ? lc.lcname : "Unknown",
+//           count: r._count.id,
+//         };
+//       })
+//     );
+
+//     res.json(dataWithLCName);
+//   } catch (e) {
+//     res.status(500).json({ error: e.message });
+//   }
+// });
 
 router.get("/allStuCountbyLC", async (req, res) => {
   try {
@@ -305,29 +409,6 @@ router.get("/totalCountforDashboard", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-
-router.get("/learningcenters/:id/students", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const data = await prisma.student.findMany({
-      where: { lcID: Number(id) },
-       include: {
-         lcname: true,        
-       },
-    });
-
-    const students = data.map(s => ({
-      ...s,
-      lcname: s.lcname ? s.lcname.lcname : null // flatten safely
-    }));
-
-    res.json(students);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 
 router.post("/postStudent", async(req, res) => {
   try{
@@ -476,7 +557,7 @@ router.post("/postExamResults", async(req, res) => {
   let totalMarks = 0;
   let countedSubjects = 0;
 
-    const examData = {session: submittedData.session, student: {connect:{id: student.id}}, average_mark: 0, average_grade: "N/A"};
+    const examData = {acayr: submittedData.acayr, session: submittedData.session, student: {connect:{id: student.id}}, average_mark: 0, average_grade: "N/A"};
 
     submittedData.results.forEach(result => {
             const subjectKey = subjectMap[result.subject];
@@ -500,11 +581,14 @@ router.post("/postExamResults", async(req, res) => {
     const upperGrades = new Set(['G-4', 'G-5', 'G-6', 'G-7', 'G-8', 'G-9', 'G-10', 'G-11', 'G-12']);
 
     const mark = examData.average_mark;
-    const grade = examData.student.grade;
+    const grade = student.grade;
+
+    console.log("grade : ", student.grade);
 
     if (lowerGrades.has(grade)) {
       examData.average_grade = mark >= 80 ? 'A' : mark >= 40 ? 'E' : 'S';
     } else if (upperGrades.has(grade)) {
+      console.log("mark : ", mark);
       examData.average_grade = mark >= 80 ? 'A' : mark >= 60 ? 'B' : mark >= 40 ? 'C' : 'D';
     }
 
@@ -536,7 +620,7 @@ router.get("/examresults", async(req, res) => {
 
     const examresults = data.map(s => ({...s, 
         lcname: s.student.lcname.lcname, 
-        acayr: s.student.acayr, 
+        acayr: s.acayr, 
         name: s.student.name, 
         stuID: s.student.stuID, 
         grade: s.student.grade
@@ -573,7 +657,7 @@ router.get("/learningcenters/:id/examresults", async(req, res) => {
 
         const examresults = data.map(s => ({...s, 
             lcname: s.student.lcname.lcname, 
-            acayr: s.student.acayr, 
+            acayr: s.acayr, 
             name: s.student.name, 
             stuID: s.student.stuID, 
             grade: s.student.grade
@@ -702,6 +786,47 @@ router.get("/gradingCountforLPforSecondSession", async (req, res) => {
   }
 });
 
+router.get("/gradingCountforLPforThirdSession", async (req, res) => {
+  try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
+    const countA = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "A",
+              acayr: acayr,
+              student: {
+                grade: { in: ["KG", "G-1", "G-2", "G-3"] }
+              }
+            }
+    });
+
+    const countE = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "E",
+              acayr: acayr,
+              student: {
+                grade: { in: ["KG", "G-1", "G-2", "G-3"] }
+              }
+            }
+    });
+
+    const countS = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "S",
+              acayr: acayr,
+              student: {
+                grade: { in: ["KG", "G-1", "G-2", "G-3"] }
+              }
+            }
+    });    
+    res.json({ countA, countE, countS });    
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/gradingCountforUPforFirstSession", async (req, res) => {
   try{
     const {acayr} = req.query;
@@ -798,6 +923,61 @@ router.get("/gradingCountforUPforSecondSession", async (req, res) => {
               }
             }
     });  
+    res.json({ countA, countB, countC, countD });    
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get("/gradingCountforUPforThirdSession", async (req, res) => {
+  try{
+    const {acayr} = req.query;
+    if (!acayr) {
+        return res.status(400).json({ error: "Academic year is required" });
+    }
+    const countA = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "A",
+              acayr: acayr,
+              student: {
+                grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
+              }
+            }
+    });
+
+    const countB = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "B",
+              acayr: acayr,
+              student: {
+                grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
+              }
+            }
+    });
+
+    const countC = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "C",
+              acayr: acayr,
+              student: {
+                grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
+              }
+            }
+    });    
+
+    const countD = await prisma.examResults.count({
+      where: { session: "Third Time",
+              average_grade: "D",
+              acayr: acayr,
+              student: {
+                grade: { in: ["G-4", "G-5", "G-6", "G-7", "G-8", "G-9", "G-10", "G-11", "G-12"] }
+              }
+            }
+    });  
+    console.log("countA : ", countA);
+    console.log("countB : ", countB);
+    console.log("countC : ", countC);
+    console.log("countD : ", countD);
     res.json({ countA, countB, countC, countD });    
   } catch (e) {
     res.status(500).json({ error: e.message });
