@@ -282,7 +282,7 @@ router.get("/allStuCountbyLC", async (req, res) => {
     const {acayr} = req.query;
     // Group by Learning Center ID (lcID)
     const result = await prisma.student.groupBy({
-      by: ["lcID"],
+      by: ["lcID", "gender"],
       where: { acayr: acayr, 
         grade: { not: "Preschool" }
       },
@@ -290,21 +290,63 @@ router.get("/allStuCountbyLC", async (req, res) => {
     });
 
     // Fetch LC names for each lcID
-    const dataWithLCName = await Promise.all(
-      result.map(async (r) => {
-        const lc = await prisma.learningCenter.findUnique({
-          where: { id: r.lcID },
-        });
-        return {
-          lcname: lc ? lc.lcname : "Unknown",
-          count: r._count.id,
+    // Get unique Learning Center IDs
+    const lcIDs = [...new Set(result.map((r) => r.lcID))];
+
+    // Fetch Learning Center names
+    const learningCenters = await prisma.learningCenter.findMany({
+      where: {
+        id: {
+          in: lcIDs
+        }
+      },
+      select: {
+        id: true,
+        lcname: true
+      }
+    });
+
+    // Create LC lookup
+    const lcMap = {};
+
+    learningCenters.forEach((lc) => {
+      lcMap[lc.id] = lc.lcname;
+    });
+
+    // Reshape data for stacked bar chart
+    const grouped = {};
+
+    result.forEach((r) => {
+      if (!grouped[r.lcID]) {
+        grouped[r.lcID] = {
+          lcname: lcMap[r.lcID] || "Unknown",
+          male: 0,
+          female: 0,
+          count: 0
         };
-      })
-    );
+      }
+
+      if (r.gender === "Male") {
+        grouped[r.lcID].male = r._count.id;
+      }
+
+      if (r.gender === "Female") {
+        grouped[r.lcID].female = r._count.id;
+      }
+
+      grouped[r.lcID].count += r._count.id;
+    });
+
+    const dataWithLCName = Object.values(grouped);
 
     res.json(dataWithLCName);
+
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+
+    res.status(500).json({
+      error: e.message
+    });
   }
 });
 
