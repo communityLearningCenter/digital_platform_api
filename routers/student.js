@@ -1016,10 +1016,6 @@ router.get("/gradingCountforUPforThirdSession", async (req, res) => {
               }
             }
     });  
-    console.log("countA : ", countA);
-    console.log("countB : ", countB);
-    console.log("countC : ", countC);
-    console.log("countD : ", countD);
     res.json({ countA, countB, countC, countD });    
   } catch (e) {
     res.status(500).json({ error: e.message });
