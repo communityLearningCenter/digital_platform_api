@@ -131,42 +131,144 @@ router.get("/stuCountbyAcaYr", async (req, res) => {
   }
 });
 
-router.get("/stuCountbyGrade", async (req, res) => {  
+router.get("/stuCountbyGrade", async (req, res) => {
   try {
-    const {acayr} = req.query;
+    const { acayr, lcID } = req.query;
+
     if (!acayr) {
-        return res.status(400).json({ error: "Academic year is required" });
+      return res.status(400).json({
+        error: "Academic year is required"
+      });
     }
 
+    if (!lcID) {
+      return res.status(400).json({
+        error: "Learning center ID is required"
+      });
+    }
+
+    // Group by Grade and Gender
     const result = await prisma.student.groupBy({
-      by: ["grade"],
+      by: ["grade", "gender"],
       where: {
-        acayr: acayr, // 👈 filter by year
-      },      
-      _count: { id: true },
+        acayr: acayr,
+        lcID: Number(lcID),
+        grade: {
+          not: "Preschool"
+        }
+      },
+      _count: {
+        id: true
+      }
     });
 
-    // Map and sort logically: KG first, then G-1..G-10 numerically
-    const sorted = result
-      .map(r => ({
-        grade: r.grade,
-        count: r._count.id,
-      }))
-      .sort((a, b) => {
-        if (a.grade === "KG") return -1; // KG first
-        if (b.grade === "KG") return 1;
+    // Reshape data for chart
+    const grouped = {};
 
-        const numA = Number(a.grade.replace("G-", ""));
-        const numB = Number(b.grade.replace("G-", ""));
+    result.forEach((r) => {
+      if (!grouped[r.grade]) {
+        grouped[r.grade] = {
+          grade: r.grade,
+          male: 0,
+          female: 0,
+          count: 0
+        };
+      }
 
-        return numA - numB;
-      });
+      if (r.gender === "Male") {
+        grouped[r.grade].male = r._count.id;
+      }
 
-    res.json(sorted);
+      if (r.gender === "Female") {
+        grouped[r.grade].female = r._count.id;
+      }
+
+      grouped[r.grade].count += r._count.id;
+    });
+
+    // Convert object to array and sort by grade
+    const dataWithGrade = Object.values(grouped).sort((a, b) => {
+      if (a.grade === "KG") return -1;
+      if (b.grade === "KG") return 1;
+
+      const numA = Number(a.grade.replace("G-", ""));
+      const numB = Number(b.grade.replace("G-", ""));
+
+      return numA - numB;
+    });
+
+    res.json(dataWithGrade);
+
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({
+      error: e.message
+    });
   }
 });
+
+// router.get("/stuCountbyGrade", async (req, res) => {  
+//   try {
+//     const {acayr, lcID} = req.query;
+//     if (!acayr) {
+//         return res.status(400).json({ error: "Academic year is required" });
+//     }
+
+//     // Base filter 
+//     const where = { acayr: acayr, }; 
+
+//     // Only add lcID filter when lcID has a value 
+//     if (lcID !== undefined && lcID !== null && lcID !== "") { 
+//       const learningcenterID = Number(lcID); 
+//         if (Number.isNaN(learningcenterID)) { 
+//           return res.status(400).json({ error: "Invalid lcID", }); 
+//         } where.lcID = learningcenterID; 
+//         console.log("Filtering by lcID:", learningcenterID); 
+//     } 
+//     else { 
+//         console.log("No lcID provided - retrieving all learning centers"); 
+//     } 
+
+//     console.log("where : ", where);
+
+//     const result = await prisma.student.groupBy({
+//       by: ["grade"],
+//       where: {
+//         //acayr: acayr, // 👈 filter by year
+//         ...where,   
+//       },      
+//       _count: { id: true },
+//     });
+
+//     // Get male and female counts 
+//     const male = result.find(r => r.gender === "Male")?._count.id || 0; 
+//     const female = result.find(r => r.gender === "Female")?._count.id || 0; 
+//     const total = male + female; 
+//     console.log("male : ", male);
+//     console.log("female :", female);
+//     console.log("total : ", total);
+//     res.json({ male, female, total, });  
+
+//     // // Map and sort logically: KG first, then G-1..G-10 numerically
+//     // const sorted = result
+//     //   .map(r => ({
+//     //     grade: r.grade,
+//     //     count: r._count.id,
+//     //   }))
+//     //   .sort((a, b) => {
+//     //     if (a.grade === "KG") return -1; // KG first
+//     //     if (b.grade === "KG") return 1;
+
+//     //     const numA = Number(a.grade.replace("G-", ""));
+//     //     const numB = Number(b.grade.replace("G-", ""));
+
+//     //     return numA - numB;
+//     //   });
+
+//     // res.json(sorted);
+//   } catch (e) {
+//     res.status(500).json({ error: e.message });
+//   }
+// });
 
 router.get("/kcStuCountbyLC", async (req, res) => {
   try {
@@ -174,7 +276,7 @@ router.get("/kcStuCountbyLC", async (req, res) => {
 
     // Group by Learning Center and Gender
     const result = await prisma.student.groupBy({
-      by: ["lcID", "gender"],
+      by: ["lcID","gender"],
       where: {
         kidsClubStu: "Yes",
         acayr: acayr,
@@ -235,15 +337,11 @@ router.get("/kcStuCountbyLC", async (req, res) => {
     const dataWithLCName = Object.values(grouped);
 
     res.json(dataWithLCName);
-
-  } catch (e) {
-    console.error(e);
-
-    res.status(500).json({
-      error: e.message
-    });
-  }
-});
+  } 
+    catch (e) { 
+      res.status(500).json({ error: e.message, }); 
+    } 
+  });
 
 // router.get("/kcStuCountbyLC", async (req, res) => {
 //   try {
@@ -350,16 +448,23 @@ router.get("/allStuCountbyLC", async (req, res) => {
   }
 });
 
-router.get("/stuCountbyGender", async (req, res) => {
+/*router.get("/stuCountbyGender", async (req, res) => {
   try{
-    const {acayr} = req.query;
+    const {acayr, lcID} = req.query;    
+    console.log("acayr : ", acayr);
+    
+    if (lcID !== undefined && lcID !== null && lcID !== "") {
+      const learningcenterID = Number (lcID);
+      console.log("lcID : ", learningcenterID);
+    }
     if (!acayr) {
         return res.status(400).json({ error: "Academic year is required" });
-    }
+    }    
 
     const male = await prisma.student.count({
       where: { gender: "Male",
               acayr: acayr,
+              lcID: learningcenterID,
               grade: { not: "Preschool" }
        }
     });
@@ -367,33 +472,157 @@ router.get("/stuCountbyGender", async (req, res) => {
     const female = await prisma.student.count({
       where: { gender: "Female",
                 acayr: acayr,
+                lcID: learningcenterID,
                 grade: { not: "Preschool" }
        }
     });
 
-    res.json({ male, female });
+    const preMale = await prisma.student.count({
+      where: { gender: "Male",
+              acayr: acayr,
+              lcID: learningcenterID,
+              grade: "Preschool" 
+       }
+    });
+
+    const preFemale = await prisma.student.count({
+      where: { gender: "Female",
+                acayr: acayr,
+                lcID: learningcenterID,
+                grade: "Preschool" 
+       }
+    });
+
+    console.log("male count(w/h pwd) :", male);
+    console.log("female count(w/h pwd) :", female);
+    console.log("pwd male count :", preMale);
+    console.log("pwd female count :", preFemale);
+
+    res.json({ male, female, preMale, preFemale });
 
   } catch (e) {
       res.status(500).json({ error: e.message });
   }
-});
+});*/
+
+router.get("/stuCountbyGender", async (req, res) => { 
+  try { const { acayr, lcID } = req.query; 
+  if (!acayr) { 
+    return res.status(400).json({ error: "Academic year is required", }); 
+  } 
+
+  // Base filter 
+  const where = { acayr: acayr, }; 
+  
+  // Only add lcID filter when lcID has a value 
+  if (lcID !== undefined && lcID !== null && lcID !== "") { 
+    const learningcenterID = Number(lcID); 
+      if (Number.isNaN(learningcenterID)) { 
+        return res.status(400).json({ error: "Invalid lcID", }); 
+      } where.lcID = learningcenterID;     
+    }
+    
+    const male = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Male", 
+        pwd: "No",
+        grade: { not: "Preschool", }, 
+      }, 
+    }); 
+    
+    const female = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Female", 
+        pwd: "No",
+        grade: { not: "Preschool", }, 
+      }, 
+    }); 
+
+    const male_pwd = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Male", 
+        pwd: "Yes",
+        grade: { not: "Preschool", }, 
+      }, 
+    }); 
+    
+    const female_pwd = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Female", 
+        pwd: "Yes",
+        grade: { not: "Preschool", }, 
+      }, 
+    }); 
+    
+    const preMale = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Male", 
+        pwd: "No",
+        grade: "Preschool", 
+      }, 
+    }); 
+    
+    const preFemale = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Female", 
+        pwd: "No",
+        grade: "Preschool", 
+      }, 
+    }); 
+
+    const preMale_pwd = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Male", 
+        pwd: "Yes",
+        grade: "Preschool", 
+      }, 
+    }); 
+    
+    const preFemale_pwd = await prisma.student.count({ 
+      where: { ...where, 
+        gender: "Female", 
+        pwd: "Yes",
+        grade: "Preschool", 
+      }, 
+    }); 
+    
+    res.json({ male, female, male_pwd, female_pwd, preMale, preFemale, preMale_pwd, preFemale_pwd}); } 
+    catch (e) { 
+      console.error(e); res.status(500).json({ error: e.message, }); 
+    } 
+  });
 
 router.get("/stuCountbyEnrollStatus", async (req,res) => {
-  const {acayr} = req.query;
+  const {acayr, lcID} = req.query;
   if (!acayr) {
       return res.status(400).json({ error: "Academic year is required" });
   }
+
+  // Base filter 
+  const where = { acayr: acayr, }; 
+
+  // Only add lcID filter when lcID has a value 
+    if (lcID !== undefined && lcID !== null && lcID !== "") { 
+      const learningcenterID = Number(lcID); 
+        if (Number.isNaN(learningcenterID)) { 
+          return res.status(400).json({ error: "Invalid lcID", }); 
+        } where.lcID = learningcenterID; 
+    } 
+    else { 
+        console.log("No lcID provided - retrieving all learning centers"); 
+    } 
+
   try{
     const old_count = await prisma.student.count({
-      where: {stuStatus: "Old",
-              acayr: acayr,
+      where: {...where, 
+              stuStatus: "Old",
               grade: { not: "Preschool" }
       }
     });
 
     const new_count = await prisma.student.count({
-      where: { stuStatus : "New",
-              acayr: acayr,
+      where: { ...where, 
+              stuStatus : "New",
               grade: { not: "Preschool" }
       }
     });
@@ -436,17 +665,41 @@ router.get("/pwdStuCountbyGender", async (req,res) => {
 
 router.get("/totalCountforDashboard", async (req, res) => {
   try{  
-    const {acayr} = req.query;
+    const { acayr, lcID } = req.query;
     if (!acayr) {
         return res.status(400).json({ error: "Academic year is required" });
     }
-    const totalStuCount = await prisma.student.count({where: { acayr: acayr, grade: { not: "Preschool" } }});
 
-    const totalTeacherCount = await prisma.teacher.count({where: { status: "Active"}});
+    // Base filter 
+    const where = { acayr: acayr, }; 
 
-    const totalLCCount = await prisma.learningCenter.count({where: { status: "Active" }});
+    // Only add lcID filter when lcID has a value 
+    if (lcID !== undefined && lcID !== null && lcID !== "") { 
+      const learningcenterID = Number(lcID); 
+        if (Number.isNaN(learningcenterID)) { 
+          return res.status(400).json({ error: "Invalid lcID", }); 
+        } where.lcID = learningcenterID; 
+    } 
+    else { 
+        console.log("No lcID provided - retrieving all learning centers"); 
+    } 
+    const totalStuCount = await prisma.student.count({
+      where: {  ...where,         
+        grade: { not: "Preschool" } 
+      }
+    });
 
-    res.json({ totalStuCount, totalTeacherCount, totalLCCount });
+    const totalPreStuCount = await prisma.student.count({
+      where: { ...where,         
+        grade:"Preschool" 
+      }
+    });
+
+    const totalLCCount = await prisma.learningCenter.count({
+      where: { status: "Active" }
+    });
+
+    res.json({ totalStuCount, totalPreStuCount, totalLCCount });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -625,12 +878,9 @@ router.post("/postExamResults", async(req, res) => {
     const mark = examData.average_mark;
     const grade = student.grade;
 
-    console.log("grade : ", student.grade);
-
     if (lowerGrades.has(grade)) {
       examData.average_grade = mark >= 80 ? 'A' : mark >= 40 ? 'E' : 'S';
     } else if (upperGrades.has(grade)) {
-      console.log("mark : ", mark);
       examData.average_grade = mark >= 80 ? 'A' : mark >= 60 ? 'B' : mark >= 40 ? 'C' : 'D';
     }
 

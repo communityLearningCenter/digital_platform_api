@@ -2,46 +2,48 @@ const express = require("express")
 const router = express.Router();
 const prisma = require("../prismaClient");
 
-router.post("/postTeacher", async(req, res) => {
-    
-    const submittedData = req.body;    
-    if(!submittedData.learningcenter.lcname || !submittedData.name){        
-        return res.status(400).json({msg: "Teacher Name and Learning Center Name are required"});
-    }
- 
-    const learningCenter = await prisma.learningCenter.findUnique({
-            where: { lcname: submittedData.learningcenter.lcname }, // assuming "name" is unique in LearningCenter model
-    });
+router.post("/postTeacher", async (req, res) => {
 
-    if (!learningCenter) {
-            return res.status(404).json({ msg: "Learning center not found" });
-    }
+  const submittedData = req.body;
+  if (!submittedData.learningcenter.lcname || !submittedData.name) {
+    return res.status(400).json({ msg: "Teacher Name and Learning Center Name are required" });
+  }
 
-    const teacher = await prisma.teacher.create({
-        data: { teacherName: submittedData.name, teacherNRC:submittedData.nrc, position:submittedData.position, status:submittedData.status, 
-            address: submittedData.address, phnumber: submittedData.phno, joinDate: submittedData.joinDate, lcname: { connect: { id: learningCenter.id } }, },
-    });
+  const learningCenter = await prisma.learningCenter.findUnique({
+    where: { lcname: submittedData.learningcenter.lcname }, // assuming "name" is unique in LearningCenter model
+  });
 
-    res.json(teacher);
+  if (!learningCenter) {
+    return res.status(404).json({ msg: "Learning center not found" });
+  }
+
+  const teacher = await prisma.teacher.create({
+    data: {
+      teacherName: submittedData.name, teacherNRC: submittedData.nrc, position: submittedData.position, status: submittedData.status,
+      address: submittedData.address, phnumber: submittedData.phno, joinDate: submittedData.joinDate, lcname: { connect: { id: learningCenter.id } },
+    },
+  });
+
+  res.json(teacher);
 });
 
-router.get("/teachers", async(req, res) => {
-    try{
-        const data = await prisma.teacher.findMany({        
-        include: {
-            lcname: true,
-        },        
+router.get("/teachers", async (req, res) => {
+  try {
+    const data = await prisma.teacher.findMany({
+      include: {
+        lcname: true,
+      },
     });
 
     const teachers = data.map(t => ({
-        ...t, lcname: t.lcname.lcname // flatten
+      ...t, lcname: t.lcname.lcname // flatten
     }));
 
     res.json(teachers);
-    }
-    catch(e){
-        res.status(500).json({error:e});
-    }
+  }
+  catch (e) {
+    res.status(500).json({ error: e });
+  }
 });
 
 router.get("/teachers/:id", async (req, res) => {
@@ -55,7 +57,7 @@ router.get("/teachers/:id", async (req, res) => {
     });
 
     const result = {
-        ...data, lcname: data.lcname.lcname // flatten
+      ...data, lcname: data.lcname.lcname // flatten
     };
 
     res.json(result); // ✅ send the correct object
@@ -69,11 +71,11 @@ router.put("/teachers/:id", async (req, res) => {
   const data = req.body;
   try {
     const learningCenter = await prisma.learningCenter.findUnique({
-            where: { id: data.learningcenter.id }, // assuming "name" is unique in LearningCenter model
+      where: { id: data.learningcenter.id }, // assuming "name" is unique in LearningCenter model
     });
 
     if (!learningCenter) {
-            return res.status(404).json({ msg: "Learning center not found" });
+      return res.status(404).json({ msg: "Learning center not found" });
     }
 
     const updatedTeacher = await prisma.teacher.update({
@@ -96,4 +98,26 @@ router.put("/teachers/:id", async (req, res) => {
   }
 });
 
-module.exports = {teacherRouter: router};
+router.get("/totalTeacherCountforDashboard", async (req, res) => {
+  try {
+    const { lcID } = req.query; 
+    const where = { 
+      status: "Active", 
+    }; 
+    // Only filter by Learning Center when a valid lcID is provided 
+    if (lcID !== undefined && lcID !== null && lcID !== "") { 
+      const parsedLcID = Number(lcID); 
+      if (Number.isNaN(parsedLcID)) { 
+        return res.status(400).json({ error: "Invalid lcID", }); 
+      } 
+     where.lcID = parsedLcID; 
+    } 
+    const totalTeacherCount = await prisma.teacher.count({ where, }); 
+    const vTeacherCount = await prisma.teacher.count({ where: { ...where, position: "Volunteer Teacher", }, }); 
+    const kTeacherCount = await prisma.teacher.count({ where: { ...where, position: "Kid's Club Teacher", }, }); 
+    const pTeacherCount = await prisma.teacher.count({ where: { ...where, position: "Preschool Teacher", }, }); 
+    res.json({ totalTeacherCount, vTeacherCount, kTeacherCount, pTeacherCount, }); } 
+    catch (e) { console.error(e); 
+    res.status(500).json({ error: e.message, }); } });
+
+    module.exports = { teacherRouter: router };
